@@ -6,7 +6,7 @@ from pyrusgeom.soccer_math import *
 from pyrusgeom.geom_2d import *
 from src.Tools import Tools
 from src.IBallAction import IBallAction, ActionType
-from RawPass import RawDirectPass, RawLeadPass
+from src.RawPass import RawDirectPass, RawLeadPass
 
 
 class GeneratorPass(BallActionGenerator):

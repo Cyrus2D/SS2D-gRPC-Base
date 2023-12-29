@@ -1,11 +1,12 @@
-from matplotlib.lines import Line2D
+from .IBallAction import IBallAction
 import service_pb2 as pb2
-from IAgent import IAgent
+from src.IAgent import IAgent
 from pyrusgeom.vector_2d import Vector2D
 from pyrusgeom.angle_deg import AngleDeg
-from Tools import Tools
+from pyrusgeom.line_2d import Line2D
+from src.Tools import Tools
 import pyrusgeom.soccer_math as smath
-from IBallAction import IBallAction, ActionType
+from src.IBallAction import IBallAction, ActionType
 
 
 class RawPass:
@@ -13,6 +14,9 @@ class RawPass:
         pass
     
     def evaluate(self) -> float:
+        pass
+    
+    def get_result(self) -> IBallAction:
         pass
 
 class RawDirectPass(RawPass):
@@ -46,6 +50,9 @@ class RawDirectPass(RawPass):
         self.result: IBallAction = None
         self.score: float = 0.0
         self.evaluate()
+    
+    def get_result(self) -> IBallAction:
+        return self.result
     
     def evaluate(self) -> float:
         self.score = self.receive_point.x()
@@ -177,6 +184,9 @@ class RawLeadPass(RawPass):
         self.score: float = 0.0
         self.evaluate()
     
+    def get_result(self) -> IBallAction:
+        return self.result   
+
     def evaluate(self) -> float:
         self.score = self.receive_point.x()
         goal_dist = self.receive_point.dist(Vector2D(52.5, 0.0))
