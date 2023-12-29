@@ -6,6 +6,7 @@ from pyrusgeom.soccer_math import *
 from pyrusgeom.geom_2d import *
 from src.Tools import Tools
 from src.IBallAction import IBallAction, ActionType
+from RawPass import RawPass
 
 
 class GeneratorPass(BallActionGenerator):
@@ -129,11 +130,12 @@ class GeneratorPass(BallActionGenerator):
         if agent.debug_mode:
             agent.add_log_text(pb2.LoggerLevel.PASS, f">>>> DPass to {tm.uniform_number} ({round(tm_pos.x(), 2)}, {round(tm_pos.y(), 2)}) -> ({round(receive_point.x(), 2)}, {round(receive_point.y(), 2)}) start_step: {start_step}, max_step: {max_step}")
 
-        self.create_pass(agent, tm, receive_point,
-                    start_step, max_step, min_ball_speed,
-                    max_ball_speed, min_receive_ball_speed,
-                    max_receive_ball_speed, ball_move_dist,
-                    ball_move_angle, "D")
+        new_pass = RawPass(agent, tm, receive_point,
+                start_step, max_step, min_ball_speed,
+                max_ball_speed, min_receive_ball_speed,
+                max_receive_ball_speed, ball_move_dist,
+                ball_move_angle, "D", self.index)
+        self.candidateActions.append(new_pass)
     
     def generate_lead_pass(self, agent: IAgent, tm: pb2.Player):
         if agent.debug_mode:
@@ -231,93 +233,14 @@ class GeneratorPass(BallActionGenerator):
                 if agent.debug_mode:
                     agent.add_log_text(pb2.LoggerLevel.PASS, f">>>> LPass to {tm.uniform_number} ({round(tm_pos.x(), 2)}, {round(tm_pos.y(), 2)}) -> ({round(receive_point.x(), 2)}, {round(receive_point.y(), 2)}) start_step: {start_step}, max_step: {max_step}")
                 max_step = start_step + 3
-                self.create_pass(agent, tm, receive_point,
-                                 start_step, max_step, min_ball_speed,
-                                 max_ball_speed, min_receive_ball_speed,
-                                 max_receive_ball_speed, ball_move_dist,
-                                 ball_move_angle, "L")
+                new_pass = RawPass(agent, tm, receive_point,
+                        start_step, max_step, min_ball_speed,
+                        max_ball_speed, min_receive_ball_speed,
+                        max_receive_ball_speed, ball_move_dist,
+                        ball_move_angle, "L", self.index)
+                self.candidateActions.append(new_pass)
+                
 
-    def create_pass(self, agent: IAgent, receiver: pb2.Player, receive_point: Vector2D,
-                    min_step, max_step, min_first_ball_speed, max_first_ball_speed,
-                    min_receive_ball_speed, max_receive_ball_speed,
-                    ball_move_dist, ball_move_angle: AngleDeg, description):
-        sp = agent.serverParams
-        ball_pos = Tools.vector2d_message_to_vector2d(agent.wm.ball.position)
-        same_index = -1
-        for step in range(min_step, max_step + 1):
-            same_index += 1
-            if agent.debug_mode:
-                agent.add_log_text(pb2.LoggerLevel.PASS, f">>>>>> #{self.index} Pass to {receiver.uniform_number} ({round(receive_point.x(), 2)}, {round(receive_point.y(), 2)}), step:{step}")
-            self.index += 1
-            first_ball_speed = smath.calc_first_term_geom_series(ball_move_dist, sp.ball_decay, step)
-
-            if first_ball_speed < min_first_ball_speed:
-                if agent.debug_mode:
-                    agent.add_log_text(pb2.LoggerLevel.PASS, f"###### FAILED to {receiver.uniform_number} step:{step} ball_speed:{first_ball_speed} ? first ball speed is low")
-                self.debug_list.append((self.index, receive_point, False, same_index))
-                break
-
-            if max_first_ball_speed < first_ball_speed:
-                if agent.debug_mode:
-                    agent.add_log_text(pb2.LoggerLevel.PASS, f"###### FAILED to {receiver.uniform_number} step:{step} ball_speed:{first_ball_speed} ? first ball speed is high")
-                self.debug_list.append((self.index, receive_point, False, same_index))
-                continue
-
-            receive_ball_speed = first_ball_speed * pow(sp.ball_decay, step)
-
-            if receive_ball_speed < min_receive_ball_speed:
-                if agent.debug_mode:
-                    agent.add_log_text(pb2.LoggerLevel.PASS, f"###### FAILED to {receiver.uniform_number} step:{step} ball_speed:{first_ball_speed} rball_speed:{receive_ball_speed} ? receive ball speed is low")
-                self.debug_list.append((self.index, receive_point, False, same_index))
-                break
-
-            if max_receive_ball_speed < receive_ball_speed:
-                if agent.debug_mode:
-                    agent.add_log_text(pb2.LoggerLevel.PASS, f"###### FAILED to {receiver.uniform_number} step:{step} ball_speed:{first_ball_speed} rball_speed:{receive_ball_speed} ? receive ball speed is high")
-                self.debug_list.append((self.index, receive_point, False, same_index))
-                continue
-
-            kick_count = Tools.predict_kick_count(agent, agent.wm.self.uniform_number, first_ball_speed, ball_move_angle)
-
-            o_step, o_unum, o_intercepted_pos = self.predict_opponents_reach_step(agent, ball_pos,
-                                                                                  first_ball_speed, ball_move_angle,
-                                                                                  receive_point, step + (kick_count - 1) + 5,
-                                                                                  description)
-
-            failed = False
-            if description == 'T':
-                if o_step <= step:
-                    failed = True
-            else:
-                if o_step <= step + (kick_count - 1):
-                    failed = True
-            if failed:
-                if agent.debug_mode:
-                    agent.add_log_text(pb2.LoggerLevel.PASS, f"###### Failed to {receiver.uniform_number} step:{step} ball_speed:{first_ball_speed} rball_speed:{receive_ball_speed} opp {o_unum} step {o_step} max_step {max_step} ? opp reach step is low")
-                self.debug_list.append((self.index, receive_point, False, same_index))
-                break
-            if agent.debug_mode:
-                agent.add_log_text(pb2.LoggerLevel.PASS, f"###### OK to {receiver.uniform_number} step:{step} ball_speed:{first_ball_speed} rball_speed:{receive_ball_speed} opp {o_unum} step {o_step}, max_step {max_step}")
-            self.debug_list.append((self.index, receive_point, True, same_index))
-            
-            candidate = IBallAction()
-            candidate.actionType = ActionType.DIRECT_PASS
-            candidate.initBallPos = ball_pos
-            candidate.targetBallPos = receive_point
-            candidate.targetUnum = receiver.uniform_number
-            candidate.firstVelocity = Vector2D.polar2vector(first_ball_speed, ball_move_angle)
-            candidate.evaluate()
-            self.candidateActions.append(candidate)
-
-            find_another_pass = False
-            if not find_another_pass:
-                break
-
-            if o_step <= step + 3:
-                break
-
-            if min_step + 3 <= step:
-                break
 
     def predict_receiver_reach_step(self, agent: IAgent, receiver: pb2.Player, pos: Vector2D, pass_type):
         ptype = agent.get_type(receiver.type_id)
@@ -347,23 +270,6 @@ class GeneratorPass(BallActionGenerator):
 
         n_step = n_turn + n_dash if n_turn == 0 else n_turn + n_dash + 1
         return n_step
-    
-    def predict_opponents_reach_step(self, agent: IAgent, first_ball_pos: Vector2D, first_ball_speed,
-                                     ball_move_angle: AngleDeg, receive_point: Vector2D, max_cycle, description):
-        first_ball_vel = Vector2D.polar2vector(first_ball_speed, ball_move_angle)
-        min_step = 1000
-        min_opp = 0
-        intercepted_pos = None
-        for opp in agent.wm.opponents:
-            if opp is None or opp.uniform_number == 0:
-                continue
-            step, intercepted_pos = Tools.predict_opponent_reach_step(agent, opp, first_ball_pos, first_ball_vel, ball_move_angle,
-                                                                     receive_point, max_cycle, description)
-            if agent.debug_mode:
-                agent.add_log_text(pb2.LoggerLevel.PASS, f"------ Opp {opp.uniform_number} step {step} min_step {min_step} in {intercepted_pos}")
-            if step < min_step:
-                min_step = step
-                min_opp = opp.uniform_number
-        return min_step, min_opp, intercepted_pos
+
 
     
