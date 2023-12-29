@@ -226,34 +226,4 @@ class GeneratorPass(BallActionGenerator):
                 
 
 
-    def predict_receiver_reach_step(self, agent: IAgent, receiver: pb2.Player, pos: Vector2D, pass_type):
-        ptype = agent.get_type(receiver.type_id)
-        receiver_pos = Vector2D(receiver.position.x, receiver.position.y)
-        receiver_vel = Vector2D(receiver.velocity.x, receiver.velocity.y)
-        receiver_inertia_pos = receiver_pos + receiver_vel
-        target_dist = receiver_inertia_pos.dist(pos)
-        n_turn = 1 if receiver.body_direction_count > 0 else Tools.predict_player_turn_cycle(agent.serverParams, ptype, receiver.body_direction,
-                                                                                             receiver_vel.r(), target_dist, 
-                                                                                             (pos - receiver_inertia_pos).th(),
-                                                                                             ptype.kickable_area, False)
-        dash_dist = target_dist
-
-        # if use_penalty:
-        #     dash_dist += receiver.penalty_distance_;
-
-        if pass_type == 'L':
-            dash_dist *= 1.05
-
-            dash_angle = (pos - receiver_pos).th()
-
-            if dash_angle.abs() > 90.0 or receiver.body_direction_count > 1 or (dash_angle - AngleDeg(receiver.body_direction)).abs() > 30.0:
-                n_turn += 1
-
-        
-        n_dash = Tools.cycles_to_reach_distance(dash_dist, ptype.real_speed_max)
-
-        n_step = n_turn + n_dash if n_turn == 0 else n_turn + n_dash + 1
-        return n_step
-
-
     

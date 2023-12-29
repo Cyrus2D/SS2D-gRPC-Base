@@ -18,6 +18,9 @@ class RawPass:
     
     def get_result(self) -> IBallAction:
         pass
+    
+    def is_failed(self) -> bool:
+        pass
 
 class RawDirectPass(RawPass):
     def __init__(self, 
@@ -50,6 +53,9 @@ class RawDirectPass(RawPass):
         self.result: IBallAction = None
         self.score: float = 0.0
         self.evaluate()
+        
+    def is_failed(self) -> bool:
+        return self.failed
     
     def get_result(self) -> IBallAction:
         return self.result
@@ -161,7 +167,6 @@ class RawLeadPass(RawPass):
                 agent: IAgent, 
                 receiver: pb2.Player, 
                 receive_point: Vector2D,
-                min_step, 
                 min_first_ball_speed, 
                 max_first_ball_speed,
                 min_receive_ball_speed, 
@@ -171,7 +176,7 @@ class RawLeadPass(RawPass):
         self.agent = agent
         self.receiver = receiver
         self.receive_point = receive_point
-        self.min_step = min_step
+        self.min_step = 0
         self.min_first_ball_speed = min_first_ball_speed
         self.max_first_ball_speed = max_first_ball_speed
         self.min_receive_ball_speed = min_receive_ball_speed
@@ -183,6 +188,9 @@ class RawLeadPass(RawPass):
         self.result: IBallAction = None
         self.score: float = 0.0
         self.evaluate()
+        
+    def is_failed(self) -> bool:
+        return self.failed
     
     def get_result(self) -> IBallAction:
         return self.result   
@@ -197,8 +205,9 @@ class RawLeadPass(RawPass):
     def check(self):
         min_receive_step = 4
         max_receive_step = 20
-        
+
         sp = self.agent.serverParams
+        ball_pos = Tools.vector2d_message_to_vector2d(self.agent.wm.ball.position)
         tm_pos = Vector2D(self.receiver.position.x, self.receiver.position.y)
         ball_move_line = Line2D(ball_pos, self.receive_point)
         player_line_dist = ball_move_line.dist(tm_pos)
@@ -211,9 +220,9 @@ class RawLeadPass(RawPass):
         start_step = max(max(min_receive_step, min_ball_step), receiver_step)
         max_step = max(max_receive_step, start_step + 3)
         max_step = start_step + 3
+        self.min_step = start_step
         
         sp = self.agent.serverParams
-        ball_pos = Tools.vector2d_message_to_vector2d(self.agent.wm.ball.position)
         same_index = -1
         for step in range(self.min_step, max_step + 1):
             same_index += 1
@@ -282,6 +291,35 @@ class RawLeadPass(RawPass):
 
             if self.min_step + 3 <= step:
                 break
+
+    def predict_receiver_reach_step(self, agent: IAgent, receiver: pb2.Player, pos: Vector2D, pass_type):
+        ptype = agent.get_type(receiver.type_id)
+        receiver_pos = Vector2D(receiver.position.x, receiver.position.y)
+        receiver_vel = Vector2D(receiver.velocity.x, receiver.velocity.y)
+        receiver_inertia_pos = receiver_pos + receiver_vel
+        target_dist = receiver_inertia_pos.dist(pos)
+        n_turn = 1 if receiver.body_direction_count > 0 else Tools.predict_player_turn_cycle(agent.serverParams, ptype, receiver.body_direction,
+                                                                                             receiver_vel.r(), target_dist, 
+                                                                                             (pos - receiver_inertia_pos).th(),
+                                                                                             ptype.kickable_area, False)
+        dash_dist = target_dist
+
+        # if use_penalty:
+        #     dash_dist += receiver.penalty_distance_;
+
+        if pass_type == 'L':
+            dash_dist *= 1.05
+
+            dash_angle = (pos - receiver_pos).th()
+
+            if dash_angle.abs() > 90.0 or receiver.body_direction_count > 1 or (dash_angle - AngleDeg(receiver.body_direction)).abs() > 30.0:
+                n_turn += 1
+
+        
+        n_dash = Tools.cycles_to_reach_distance(dash_dist, ptype.real_speed_max)
+
+        n_step = n_turn + n_dash if n_turn == 0 else n_turn + n_dash + 1
+        return n_step
         
     def predict_opponents_reach_step(self, 
                                     agent: IAgent,

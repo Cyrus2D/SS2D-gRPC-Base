@@ -20,7 +20,7 @@ class WithBallDecisionMaker(IDecisionMaker):
         for action in candidate_actions:
             action.check()
             if action.get_result() is not None \
-                and not action.is_faild():
+                and not action.is_failed():
                 
                 best_action = action.get_result()
                 agent.add_action(pb2.Action(body_smart_kick=pb2.Body_SmartKick(
@@ -28,7 +28,7 @@ class WithBallDecisionMaker(IDecisionMaker):
                     first_speed=best_action.firstVelocity.r(),
                     first_speed_threshold=0.0,
                     max_steps=best_action.targetCycle)))
-                return
+        return
                 
 
         if len(candidate_actions) == 0:
