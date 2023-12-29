@@ -6,7 +6,7 @@ from pyrusgeom.soccer_math import *
 from pyrusgeom.geom_2d import *
 from src.Tools import Tools
 from src.IBallAction import IBallAction, ActionType
-from RawPass import RawPass
+from RawPass import RawDirectPass, RawLeadPass
 
 
 class GeneratorPass(BallActionGenerator):
@@ -130,11 +130,11 @@ class GeneratorPass(BallActionGenerator):
         if agent.debug_mode:
             agent.add_log_text(pb2.LoggerLevel.PASS, f">>>> DPass to {tm.uniform_number} ({round(tm_pos.x(), 2)}, {round(tm_pos.y(), 2)}) -> ({round(receive_point.x(), 2)}, {round(receive_point.y(), 2)}) start_step: {start_step}, max_step: {max_step}")
 
-        new_pass = RawPass(agent, tm, receive_point,
+        new_pass = RawDirectPass(agent, tm, receive_point,
                 start_step, max_step, min_ball_speed,
                 max_ball_speed, min_receive_ball_speed,
                 max_receive_ball_speed, ball_move_dist,
-                ball_move_angle, "D", self.index)
+                ball_move_angle, self.index)
         self.candidateActions.append(new_pass)
     
     def generate_lead_pass(self, agent: IAgent, tm: pb2.Player):
@@ -184,10 +184,6 @@ class GeneratorPass(BallActionGenerator):
                 angle = angle_from_ball + angle_step * a
                 receive_point = tm_pos + tm_vel + Vector2D.from_polar(player_move_dist, angle)
 
-                move_dist_penalty_step = 0
-                ball_move_line = Line2D(ball_pos, receive_point)
-                player_line_dist = ball_move_line.dist(tm_pos)
-                move_dist_penalty_step = int(player_line_dist * 0.3)
                 if receive_point.x() > sp.pitch_half_length - 3.0 \
                         or receive_point.x() < -sp.pitch_half_length + 5.0 \
                         or receive_point.abs_y() > sp.pitch_half_width - 3.0:
@@ -221,23 +217,11 @@ class GeneratorPass(BallActionGenerator):
                         agent.add_log_text(pb2.LoggerLevel.PASS, f"## FAILED nearest_receiver is not tm")
                     continue
 
-                receiver_step = self.predict_receiver_reach_step(agent, tm, receive_point, 'L') + move_dist_penalty_step
-                ball_move_angle = (receive_point - ball_pos).th()
-
-                min_ball_step = Tools.ball_move_step(sp.ball_speed_max, ball_move_dist, sp.ball_decay)
-
-                start_step = max(max(min_receive_step, min_ball_step), receiver_step)
-                # ifdef CREATE_SEVERAL_CANDIDATES_ON_SAME_POINT
-                max_step = max(max_receive_step, start_step + 3)
-                # else
-                if agent.debug_mode:
-                    agent.add_log_text(pb2.LoggerLevel.PASS, f">>>> LPass to {tm.uniform_number} ({round(tm_pos.x(), 2)}, {round(tm_pos.y(), 2)}) -> ({round(receive_point.x(), 2)}, {round(receive_point.y(), 2)}) start_step: {start_step}, max_step: {max_step}")
-                max_step = start_step + 3
-                new_pass = RawPass(agent, tm, receive_point,
-                        start_step, max_step, min_ball_speed,
+                new_pass = RawLeadPass(agent, tm, receive_point,
+                        min_ball_speed,
                         max_ball_speed, min_receive_ball_speed,
                         max_receive_ball_speed, ball_move_dist,
-                        ball_move_angle, "L", self.index)
+                        self.index)
                 self.candidateActions.append(new_pass)
                 
 
