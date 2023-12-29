@@ -15,7 +15,10 @@ class WithBallDecisionMaker(IDecisionMaker):
     def make_decision(self, agent: IAgent):
         candidate_actions = self.pass_generator.generate(agent, 0)
         candidate_actions.sort(key=lambda x: x.score, reverse=True)
-        TaskManager.run_tasks(candidate_actions, lambda x: x.check())
+        # TaskManager.run_tasks(candidate_actions, lambda x: x.check())
+        for action in candidate_actions:
+            action.check()
+        
 
         if len(candidate_actions) == 0:
             agent.add_action(pb2.Action(body_hold_ball=pb2.Body_HoldBall()))

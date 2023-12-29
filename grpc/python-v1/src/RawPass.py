@@ -8,7 +8,14 @@ import pyrusgeom.soccer_math as smath
 from IBallAction import IBallAction, ActionType
 
 
-class RawDirectPass:
+class RawPass:
+    def check(self):
+        pass
+    
+    def evaluate(self) -> float:
+        pass
+
+class RawDirectPass(RawPass):
     def __init__(self, 
                 agent: IAgent, 
                 receiver: pb2.Player, 
@@ -142,7 +149,7 @@ class RawDirectPass:
                 min_opp = opp.uniform_number
         return min_step, min_opp, intercepted_pos
 
-class RawLeadPass:
+class RawLeadPass(RawPass):
     def __init__(self, 
                 agent: IAgent, 
                 receiver: pb2.Player, 
