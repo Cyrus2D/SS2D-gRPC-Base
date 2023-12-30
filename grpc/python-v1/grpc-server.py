@@ -6,6 +6,8 @@ import grpc
 from src.SamplePlayerAgent import SamplePlayerAgent
 from threading import RLock
 
+from task_manager import TaskManager
+
 lock = RLock()
 
 
@@ -42,6 +44,7 @@ def serve():
     server.add_insecure_port('[::]:50051')
     server.start()
     print("Server started at port 50051")
+    TaskManager.reset(True)
     server.wait_for_termination()
 
 
