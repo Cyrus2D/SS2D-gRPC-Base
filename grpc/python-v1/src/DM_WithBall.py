@@ -1,4 +1,5 @@
 # from pyparsing import col
+from re import A
 import service_pb2 as pb2
 from src.IDecisionMaker import IDecisionMaker
 from src.IAgent import IAgent
@@ -14,19 +15,16 @@ from task_manager import ITask, OldTaskManager, TaskManager
 # best_break
 # pool: 5, 10
 
-class ActionGroupTask(ITask):
-    group_size: int = 10
-    
-    def __init__(self, actions: list[RawPass]) -> None:
+class ActionTask(ITask):
+    def __init__(self, action: RawPass) -> None:
         super().__init__()
-        self.actions = actions
+        self.action = action
     
     def _run(self) -> None:
-        for action in self.actions:
-            action.check()
+        self.action.check()
     
     def getResult(self):
-        return self.actions
+        return self.action
 
 # def run_actions_with_task_manager(acttions: list[RawPass]):
 #     tm = OldTaskManager(-1, 20, [ActionTask(action) for action in acttions])
@@ -60,12 +58,10 @@ class WithBallDecisionMaker(IDecisionMaker):
             return
         
         candidate_actions.sort(key=lambda x: x.score, reverse=True)
-        TaskManager.set_tasks([
-            ActionGroupTask(candidate_actions[i:i+ActionGroupTask.group_size])
-            for i in range(0, len(candidate_actions), ActionGroupTask.group_size)
-        ])
+        TaskManager.set_tasks(
+            [ActionTask(action) for action in candidate_actions]
+        )
         results = TaskManager.get_results()
-        results = [item for sublist in results for item in sublist]
         results = list(filter(lambda x: x is not None and not x.is_failed() and x.get_result() is not None, results))
         if len(results) == 0:
             agent.add_action(pb2.Action(body_hold_ball=pb2.Body_HoldBall()))

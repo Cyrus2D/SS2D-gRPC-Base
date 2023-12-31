@@ -21,7 +21,7 @@ class TaskManager:
     tasks: mp.Queue = mp.Queue()
     results: mp.Queue = mp.Queue()
     n_processes: int = 20
-    processes: list[mp.Process] = []
+    process: mp.Process = None
     n_tasks: int = 0
     
     @staticmethod
@@ -33,29 +33,37 @@ class TaskManager:
         
     @staticmethod
     def set_tasks(tasks: list[ITask]):
-        for task in tasks:
-            TaskManager.tasks.put(task)
-        TaskManager.n_tasks = len(tasks)
+        TaskManager.tasks.put(tasks)
+        TaskManager.n_tasks = 1
     
     @staticmethod
     def make_processes():
-        for i in range(TaskManager.n_processes):
-            TaskManager.processes.append(mp.Process(target=TaskManager.run, args=()))
-            TaskManager.processes[i].start()
+        TaskManager.process = mp.Process(target=TaskManager.run, args=())
+        TaskManager.process.start()
     
     @staticmethod
     def run() -> None:
+        pool = mp.Pool(TaskManager.n_processes)
         while True:
-            task: ITask = TaskManager.tasks.get()
-            task.run()
-            TaskManager.results.put(task.getResult())
+            print('getting tasks')
+            tasks: ITask = TaskManager.tasks.get()
+            print('got tasks')
+            t = time.time()
+            results = pool.map(TaskManager.run_task, tasks)
+            print(f"Tasks time: {time.time() - t}")
+            print('tasks done')
+            TaskManager.results.put(results)
+            
+    @staticmethod
+    def run_task(task: ITask) -> None:
+        task.run()
+        return task.getResult()
     
     @staticmethod
     def get_results() -> list:
-        print(TaskManager.n_tasks)
-        results = []
-        for i in range(TaskManager.n_tasks):
-            results.append(TaskManager.results.get())
+        print('getting results')
+        results = TaskManager.results.get()
+        print('got results')
         return results
     
 class OldTaskManager:
