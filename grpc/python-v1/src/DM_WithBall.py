@@ -6,7 +6,7 @@ from pyrusgeom.soccer_math import *
 from pyrusgeom.geom_2d import *
 from src.GEN_Pass import GeneratorPass
 from src.GEN_Dribble import GeneratorDribble
-from src.IBallAction import BallAction
+from src.IBallAction import ActionType, BallAction
 import time
 
 class WithBallDecisionMaker(IDecisionMaker):
@@ -41,7 +41,7 @@ class WithBallDecisionMaker(IDecisionMaker):
                 if candidate.score > best_score:
                     best_score = candidate.score
                     best_action = candidate
-                    break        
+                    break
         end_time = time.time()
         WithBallDecisionMaker.sum_time += end_time - start_time
         WithBallDecisionMaker.count += 1
@@ -50,6 +50,17 @@ class WithBallDecisionMaker(IDecisionMaker):
             agent.add_action(pb2.Action(body_hold_ball=pb2.Body_HoldBall()))
             return
         
+        if best_action.actionType == ActionType.DRIBBLE:
+            agent.add_action(
+                pb2.Action(
+                    bhv_normal_dribble=pb2.Bhv_NormalDribble(
+                        target_point=pb2.Vector2D(x=best_action.targetBallPos.x(), y=best_action.targetBallPos.y()),
+                        first_velocity=best_action.firstVelocity.r(),
+                        n_turn=best_action.n_turn,
+                        n_dash=best_action.n_dash,
+                    )
+                )
+            )
         agent.add_action(pb2.Action(body_smart_kick=pb2.Body_SmartKick(
             target_point=pb2.Vector2D(x=best_action.targetBallPos.x(), y=best_action.targetBallPos.y()),
             first_speed=best_action.firstVelocity.r(),

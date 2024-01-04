@@ -45,6 +45,8 @@
 #include "player/bhv_basic_move.h"
 #include "player/setplay/bhv_set_play.h"
 #include "player/bhv_penalty_kick.h"
+#include "player/planner/dribble.h"
+#include "player/planner/bhv_normal_dribble.h"
 
 #include <rcsc/player/say_message_builder.h>
 #include <rcsc/common/player_param.h>
@@ -902,7 +904,9 @@ void GrpcAgent::getAction(rcsc::PlayerAgent * agent) const{
         }
         case Action::kHeliosSetPlay:
         {
+            LOG("set play");
             Bhv_SetPlay().execute( agent );
+            LOG("set play done");
             break;
         }
         case Action::kHeliosPenalty:
@@ -913,6 +917,25 @@ void GrpcAgent::getAction(rcsc::PlayerAgent * agent) const{
         case Action::kHeliosCommunication:
         {
             sample_communication->execute(agent);
+            break;
+        }
+
+        case Action::kBhvNormalDribble:
+        {
+            const auto& bhvNormalDribble = action.bhv_normal_dribble();
+            const auto& targetPoint = GrpcAgent::convertVector2D(bhvNormalDribble.target_point());
+            auto dribble = rcsc::Dribble(agent->world().self().unum(),targetPoint, bhvNormalDribble.first_velocity(), 1, bhvNormalDribble.n_turn(), bhvNormalDribble.n_dash(), "shortDribble");
+            std::cout << "Dribble" << ", "
+                      << agent->world().self().unum() << ", "
+                      << targetPoint << ", "
+                      << bhvNormalDribble.first_velocity() << ", "
+                      << 1 << ", "
+                      << bhvNormalDribble.n_turn() << ", "
+                      << bhvNormalDribble.n_dash() << ", "
+                      << "shortDribble" << std::endl;
+
+            Bhv_NormalDribble(dribble).execute(agent);
+            body_action_done++;
             break;
         }
 

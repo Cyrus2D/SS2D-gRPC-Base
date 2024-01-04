@@ -137,13 +137,15 @@ class GeneratorDribble(BallActionGenerator):
                 continue
 
             candidate = DribbleAction()
-            candidate.type = ActionType.DRIBBLE
+            candidate.actionType = ActionType.DRIBBLE
             candidate.initBallPos = Tools.vector2d_message_to_vector2d(wm.ball.position)
             candidate.targetBallPos = ball_trap_pos
             candidate.targetUnum = wm.self.uniform_number
             candidate.firstVelocity = first_vel
             candidate.index = self.index
             candidate.dribble_steps = n_turn + n_dash + 1
+            candidate.n_turn = n_turn
+            candidate.n_dash = n_dash
             candidate.evaluate()
             self.candidates.append(candidate)
                 # if debug_dribble:

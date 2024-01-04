@@ -813,7 +813,15 @@ message Action {
       HeliosSetPlay helios_set_play = 62;
       HeliosPenalty helios_penalty = 63;
       HeliosCommunicaion helios_communication = 64;
+      Bhv_NormalDribble bhv_normal_dribble = 65;
   }
+}
+
+message Bhv_NormalDribble {
+  Vector2D target_point = 1;
+  float first_velocity = 2;
+  int32 n_turn = 3;
+  int32 n_dash = 4;
 }
 
 message Actions {

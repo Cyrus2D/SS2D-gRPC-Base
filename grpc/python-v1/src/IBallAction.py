@@ -52,6 +52,8 @@ class DribbleAction(BallAction):
     def __init__(self) -> None:
         super().__init__()
         self.dribble_steps: int = 0
+        self.n_turn: int = 0
+        self.n_dash: int = 0
     
     def check_possibility(self, agent: IAgent) -> None:
         wm = agent.wm
