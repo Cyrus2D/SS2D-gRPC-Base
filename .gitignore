@@ -31,3 +31,5 @@ build/
 cmake-build-debug/
 cmake-build-release/
 cmake-build-debug-wsl/
+grpc/python-v1/__pycache__/
+grpc/python-v1/src/__pycache__/
