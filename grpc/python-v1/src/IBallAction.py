@@ -46,7 +46,105 @@ class BallAction(ABC):
     
     def __repr__(self) -> str:
         return f"ActionType: {self.actionType}, score: {self.score}, targetBallPos: {self.targetBallPos}, firstVelocity: {self.firstVelocity}, targetVelocity: {self.targetVelocity}, targetDirection: {self.targetDirection}, success: {self.success}"
+
+
+class DribbleAction(BallAction):
+    def __init__(self) -> None:
+        super().__init__()
+        self.dribble_steps: int = 0
     
+    def check_possibility(self, agent: IAgent) -> None:
+        wm = agent.wm
+        sp = agent.serverParams
+        ball_trap_pos = self.targetBallPos
+        dribble_step = self.dribble_steps
+        
+        ball_move_angle:AngleDeg = (ball_trap_pos - Tools.vector2d_message_to_vector2d(wm.ball.position)).th()
+
+        for o in range(12):
+            opp = wm.their_players_dict[o]
+            if opp is None or opp.uniform_number == 0:
+                # if debug_dribble:
+                #     log.sw_log().dribble().add_text( "###OPP {} is ghost".format(o))
+                continue
+
+            if opp.dist_from_self > 20.0:
+                # if debug_dribble:
+                #     log.sw_log().dribble().add_text( "###OPP {} is far".format(o))
+                continue
+
+            ptype = agent.get_type(opp.type_id)
+
+            control_area = (sp.catchable_area
+                            if opp.is_goalie
+                               and ball_trap_pos.x() > sp.their_penalty_area_line_x
+                               and ball_trap_pos.abs_y() < sp.penalty_area_half_width
+                            else ptype.kickable_area)
+
+            opp_pos = Tools.inertia_point(Tools.vector2d_message_to_vector2d(opp.position), 
+                                          Tools.vector2d_message_to_vector2d(opp.velocity), 
+                                          dribble_step, 
+                                          ptype.player_decay)
+
+            ball_to_opp_rel = (Tools.vector2d_message_to_vector2d(opp.position) - Tools.vector2d_message_to_vector2d(wm.ball.position)).rotated_vector(-ball_move_angle)
+
+            if ball_to_opp_rel.x() < -4.0:
+                # if debug_dribble:
+                #     log.sw_log().dribble().add_text( "###OPP {} is behind".format(o))
+                continue
+
+            target_dist = opp_pos.dist(ball_trap_pos)
+
+            if target_dist - control_area < 0.001:
+                # if debug_dribble:
+                #     log.sw_log().dribble().add_text( "###OPP {} Catch, ball will be in his body".format(o))
+                return False
+
+            dash_dist = target_dist
+            dash_dist -= control_area * 0.5
+            dash_dist -= 0.2
+            n_dash = Tools.cycles_to_reach_distance(dash_dist, ptype.real_speed_max)
+
+            n_turn = 1 if opp.body_direction_count > 1 else Tools.predict_player_turn_cycle(sp,
+                                                                                            ptype,
+                                                                                            opp.body_direction,
+                                                                                            Tools.vector2d_message_to_vector2d(opp.velocity).r(),
+                                                                                            target_dist,
+                                                                                            (ball_trap_pos - opp_pos).th(),
+                                                                                            control_area,
+                                                                                            True)
+
+            n_step = n_turn + n_dash if n_turn == 0 else n_turn + n_dash + 1
+
+            bonus_step = 0
+            if ball_trap_pos.x() < 30.0:
+                bonus_step += 1
+
+            if ball_trap_pos.x() < 0.0:
+                bonus_step += 1
+
+            if opp.is_tackling:
+                bonus_step = -5
+
+            if ball_to_opp_rel.x() > 0.5:
+                bonus_step += smath.bound(0, opp.pos_count, 8)
+            else:
+                bonus_step += smath.bound(0, opp.pos_count, 4)
+
+            if n_step - bonus_step <= dribble_step:
+                # if debug_dribble:
+                #     log.sw_log().dribble().add_text(
+                #                   "###OPP {} catch n_step:{}, dr_step:{}, bonas:{}".format(o, n_step, dribble_step,
+                #                                                                        bonus_step))
+                self.success = False
+                return
+            # else:
+                # if debug_dribble:
+                #     log.sw_log().dribble().add_text(
+                #                   "###OPP {} can't catch n_step:{}, dr_step:{}, bonas:{}".format(o, n_step, dribble_step,
+                                                                                        #    bonus_step))
+        self.success = True
+ 
     
 class PassAction(BallAction):
     def __init__(self) -> None:

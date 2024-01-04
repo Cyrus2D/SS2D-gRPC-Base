@@ -5,19 +5,23 @@ from src.IAgent import IAgent
 from pyrusgeom.soccer_math import *
 from pyrusgeom.geom_2d import *
 from src.GEN_Pass import GeneratorPass
+from src.GEN_Dribble import GeneratorDribble
 from src.IBallAction import BallAction
 import time
 
 class WithBallDecisionMaker(IDecisionMaker):
     def __init__(self):
         self.pass_generator = GeneratorPass()
+        self.dribble_generator = GeneratorDribble()
         pass
     
     sum_time = 0
     count = 0
     def make_decision(self, agent: IAgent):
         start_time = time.time()
-        candidate_actions: list[BallAction] = self.pass_generator.generate(agent, 0)
+        candidate_actions: list[BallAction] = []
+        # candidate_actions = self.pass_generator.generate(agent, 0)
+        candidate_actions += self.dribble_generator.generator(agent)
 
         if len(candidate_actions) == 0:
             agent.add_action(pb2.Action(body_hold_ball=pb2.Body_HoldBall()))
