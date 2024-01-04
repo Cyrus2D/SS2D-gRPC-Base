@@ -33,7 +33,9 @@ class TaskManager:
         
     @staticmethod
     def set_tasks(tasks: list[ITask]):
+        print(f'T1: {time.time()}')
         TaskManager.tasks.put(tasks)
+        print(f'T2: {time.time()}')
         TaskManager.n_tasks = 1
     
     @staticmethod
@@ -45,9 +47,8 @@ class TaskManager:
     def run() -> None:
         pool = mp.Pool(TaskManager.n_processes)
         while True:
-            print('getting tasks')
             tasks: ITask = TaskManager.tasks.get()
-            print('got tasks')
+            print(f'T4: {time.time()}')
             t = time.time()
             results = pool.map(TaskManager.run_task, tasks)
             print(f"Tasks time: {time.time() - t}")
